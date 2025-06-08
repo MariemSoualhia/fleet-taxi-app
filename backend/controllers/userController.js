@@ -1,5 +1,6 @@
 // GET /api/users/admins
 const User = require("../models/User");
+const sendNotification = require("../utils/sendNotification");
 
 const getAdmins = async (req, res) => {
   try {
@@ -37,7 +38,10 @@ const approveUser = async (req, res) => {
 
     user.isApproved = true;
     await user.save();
-
+    await sendNotification({
+      userId: user._id,
+      message: "Your account has been approved by the super admin!",
+    });
     res.json({ message: "User approved successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });

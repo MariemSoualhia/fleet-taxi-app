@@ -26,7 +26,7 @@ function RegisterPage() {
       setAlertSeverity("success");
       setAlertMessage("Registration successful! You can now log in.");
       setSnackbarOpen(true);
-      setTimeout(() => navigate("/"), 1000); // petite pause avant de rediriger
+      setTimeout(() => navigate("/"), 1000);
     } catch (error) {
       const msg =
         error.response?.data?.message ||
@@ -65,10 +65,7 @@ function RegisterPage() {
 
           <Form.Item name="role" label="Role" rules={[{ required: true }]}>
             <Select placeholder="Select role">
-              <Option value="manager">Manager</Option>
-              <Option value="logisticsOperator">Logistics Operator</Option>
-              <Option value="companyOwner">Company Owner</Option>
-              <Option value="supervisor">Supervisor</Option>
+              <Option value="admin">Admin</Option>
             </Select>
           </Form.Item>
 

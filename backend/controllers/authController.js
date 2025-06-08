@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
+const sendNotification = require("../utils/sendNotification");
 
 // 🔐 Login
 exports.login = async (req, res) => {
@@ -83,7 +84,14 @@ exports.registerDriver = async (req, res) => {
       isApproved: false,
       driverDetails,
     });
-
+    // 🔔 Notify super admin
+    const superAdmin = await User.findOne({ role: "superAdmin" });
+    if (superAdmin) {
+      await sendNotification(
+        superAdmin._id,
+        `New driver "${name}" has requested account approval.`
+      );
+    }
     res.status(201).json({
       user: {
         _id: driver._id,
@@ -94,6 +102,37 @@ exports.registerDriver = async (req, res) => {
       },
       token: generateToken(driver),
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// Pour tout le monde via /register
+exports.registerUser = async (req, res) => {
+  const { name, email, password, phone, role } = req.body;
+
+  try {
+    const userExists = await User.findOne({ email });
+    if (userExists)
+      return res.status(400).json({ message: "User already exists" });
+
+    const newUser = await User.create({
+      name,
+      email,
+      password,
+      phone,
+      role,
+      isApproved: false,
+    });
+    // 🔔 Notify super admin
+    const superAdmin = await User.findOne({ role: "superAdmin" });
+    if (superAdmin) {
+      await sendNotification(
+        superAdmin._id,
+        `New ${role} "${name}" has requested account approval.`
+      );
+    }
+
+    res.status(201).json({ message: "Account created, waiting for approval." });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

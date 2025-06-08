@@ -4,6 +4,7 @@ const {
   login,
   registerAdmin,
   registerDriver,
+  registerUser,
 } = require("../controllers/authController");
 
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
@@ -21,5 +22,6 @@ router.post(
   authorizeRoles("admin"),
   registerDriver
 );
+router.post("/register", registerUser);
 
 module.exports = router;

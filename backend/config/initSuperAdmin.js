@@ -5,8 +5,8 @@ const createSuperAdmin = async () => {
   if (!existingSuperAdmin) {
     await User.create({
       name: "Super Admin",
-      email: process.env.email,
-      password: process.env.password,
+      email: process.env.emailSuper,
+      password: process.env.passwordSuper,
       role: "superAdmin",
       isApproved: true,
     });

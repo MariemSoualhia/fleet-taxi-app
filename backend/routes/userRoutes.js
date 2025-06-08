@@ -5,6 +5,10 @@ const {
   getUsers,
   approveUser,
 } = require("../controllers/userController");
+const {
+  getMyNotifications,
+  markAllNotificationsAsRead,
+} = require("../controllers/notificationController");
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
@@ -19,5 +23,18 @@ router.get(
 );
 router.put("/:id/approve", protect, authorizeRoles("superAdmin"), approveUser);
 router.get("/", protect, authorizeRoles("superAdmin"), getUsers);
+
+router.get(
+  "/notifications",
+  protect,
+  authorizeRoles("superAdmin"),
+  getMyNotifications
+);
+router.put(
+  "/notifications/mark-all-read",
+  protect,
+  authorizeRoles("superAdmin"),
+  markAllNotificationsAsRead
+);
 
 module.exports = router;

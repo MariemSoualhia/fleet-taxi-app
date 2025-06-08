@@ -40,7 +40,6 @@ function Sidebar() {
     superAdmin: [
       { key: "dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
       { key: "admin-list", icon: <TeamOutlined />, label: "Admins" },
-      { key: "create-admin", icon: <UserAddOutlined />, label: "Add Admin" },
       {
         key: "usersapp",
         icon: <CheckCircleOutlined />,

@@ -2,12 +2,12 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const defimg = "profil1.png";
 
-// Sous-schema pour les conducteurs
+// 🔹 Sous-schema pour les conducteurs
 const driverDetailsSchema = new mongoose.Schema({
   licenseNumber: {
     type: String,
     unique: true,
-    sparse: true, // <-- important : permet d’avoir plusieurs docs avec licenseNumber = null
+    sparse: true,
   },
   hireDate: { type: Date },
   status: {
@@ -22,6 +22,16 @@ const driverDetailsSchema = new mongoose.Schema({
   },
 });
 
+// 🔹 Sous-schema pour les sociétés (superAdmin uniquement)
+const companyDetailsSchema = new mongoose.Schema({
+  companyName: { type: String, required: true },
+  companyAddress: { type: String },
+  companyEmail: { type: String },
+  companyPhone: { type: String },
+  website: { type: String },
+  description: { type: String },
+});
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -33,10 +43,27 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     phone: { type: String },
-    company: { type: String },
-    position: { type: String },
-    isApproved: { type: Boolean, default: false },
     profileImage: { type: String, default: defimg },
+    isApproved: { type: Boolean, default: false },
+
+    // 🔸 Si superAdmin
+    companyDetails: {
+      type: companyDetailsSchema,
+      required: function () {
+        return this.role === "superAdmin";
+      },
+    },
+
+    // 🔸 Si admin
+    superAdmin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: function () {
+        return this.role === "admin";
+      },
+    },
+
+    // 🔸 Si driver
     admin: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -44,6 +71,7 @@ const userSchema = new mongoose.Schema(
         return this.role === "driver";
       },
     },
+
     driverDetails: {
       type: driverDetailsSchema,
       required: function () {
@@ -54,7 +82,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🔐 Hash du mot de passe
+// 🔐 Hash du mot de passe avant enregistrement
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
@@ -62,6 +90,7 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+// 🔐 Vérification du mot de passe
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

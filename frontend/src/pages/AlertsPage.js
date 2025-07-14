@@ -1,4 +1,3 @@
-// src/pages/AlertsPage.js
 import { useEffect, useState } from "react";
 import { Table, Button, Tag, Popconfirm, Select, Tooltip } from "antd";
 import { CheckCircleOutlined, ReloadOutlined } from "@ant-design/icons";
@@ -90,6 +89,61 @@ function AlertsPage() {
       title: "Message",
       dataIndex: "message",
       key: "message",
+    },
+    {
+      title: "Taxi",
+      dataIndex: ["taxiId", "plateNumber"],
+      key: "taxi",
+      render: (_, record) =>
+        record.taxiId ? (
+          <>
+            <div>
+              <b>Plate:</b> {record.taxiId.plateNumber}
+            </div>
+            <div>
+              <b>Model:</b> {record.taxiId.model || "N/A"}
+            </div>
+          </>
+        ) : (
+          <i>—</i>
+        ),
+    },
+    {
+      title: "Admin",
+      dataIndex: ["admin", "name"],
+      key: "admin",
+      render: (name) => name || <i>—</i>,
+    },
+    {
+      title: "Super Admin",
+      dataIndex: ["superAdmin", "name"],
+      key: "superAdmin",
+      render: (name) => name || <i>—</i>,
+    },
+    {
+      title: "Related Trip",
+      dataIndex: "relatedTripId",
+      key: "relatedTrip",
+      render: (trip) =>
+        trip ? (
+          <>
+            <div>
+              <b>Start:</b>{" "}
+              {trip.startTime
+                ? new Date(trip.startTime).toLocaleString()
+                : "N/A"}
+            </div>
+            <div>
+              <b>End:</b>{" "}
+              {trip.endTime ? new Date(trip.endTime).toLocaleString() : "N/A"}
+            </div>
+            <div>
+              <b>Status:</b> {trip.deliveryStatus || "N/A"}
+            </div>
+          </>
+        ) : (
+          <i>—</i>
+        ),
     },
     {
       title: "Status",

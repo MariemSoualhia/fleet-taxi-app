@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Layout, Button, Badge, Dropdown } from "antd";
+import { Layout, Button, Badge, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
@@ -8,10 +8,9 @@ import { BellOutlined } from "@ant-design/icons";
 const { Header } = Layout;
 
 function Navbar() {
-  const { user, logout, loading } = useAuth();
-  const { token } = useAuth();
-
+  const { user, logout, loading, token } = useAuth();
   const navigate = useNavigate();
+
   const [notifications, setNotifications] = useState([]);
   const [openDropdown, setOpenDropdown] = useState(false);
   const dropdownRef = useRef();
@@ -26,9 +25,21 @@ function Navbar() {
           },
         }
       );
-      setNotifications(res.data);
+
+      // Merge old + new without duplicates
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map((n) => n._id));
+        const merged = [
+          ...res.data.filter((n) => !existingIds.has(n._id)),
+          ...prev,
+        ];
+        return merged.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+      });
     } catch (error) {
       console.error("Error fetching notifications", error);
+      message.error("Failed to load notifications.");
     }
   };
 
@@ -43,14 +54,13 @@ function Navbar() {
           },
         }
       );
-      // Actualise localement
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     } catch (error) {
       console.error("Error marking notifications as read", error);
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     if (token) {
@@ -61,12 +71,16 @@ function Navbar() {
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        if (openDropdown && unreadCount > 0) {
+          markAllAsRead();
+        }
         setOpenDropdown(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [openDropdown, unreadCount]);
 
   const handleLogout = () => {
     logout();
@@ -96,9 +110,12 @@ function Navbar() {
             style={{
               padding: "8px",
               marginBottom: "5px",
-              backgroundColor: notif.isRead ? "#f5f5f5" : "#e6f7ff",
+              backgroundColor: notif.read ? "#f5f5f5" : "#e6f7ff",
+              borderLeft: notif.read
+                ? "4px solid transparent"
+                : "4px solid #1890ff",
               borderRadius: "5px",
-              fontWeight: notif.isRead ? "normal" : "bold",
+              fontWeight: notif.read ? "normal" : "bold",
               fontSize: "14px",
             }}
           >
@@ -150,10 +167,7 @@ function Navbar() {
           <Badge count={unreadCount} size="small">
             <BellOutlined
               style={{ fontSize: "20px", cursor: "pointer" }}
-              onClick={() => {
-                setOpenDropdown(!openDropdown);
-                if (!openDropdown) markAllAsRead();
-              }}
+              onClick={() => setOpenDropdown(!openDropdown)}
             />
           </Badge>
           {openDropdown && (

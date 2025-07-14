@@ -39,8 +39,6 @@ function ProfilePage() {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        company: user.company,
-        position: user.position,
       });
     }
   }, [user]);
@@ -91,7 +89,6 @@ function ProfilePage() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
     logout();
     navigate("/");
   };
@@ -174,8 +171,21 @@ function ProfilePage() {
               <Text strong>Name:</Text> <Text>{user?.name}</Text>
               <Text strong>Email:</Text> <Text>{user?.email}</Text>
               <Text strong>Phone:</Text> <Text>{user?.phone || "—"}</Text>
-              <Text strong>Company:</Text> <Text>{user?.company || "—"}</Text>
-              <Text strong>Position:</Text> <Text>{user?.position || "—"}</Text>
+              {user.role === "superAdmin" && (
+                <>
+                  <Text strong>Company:</Text>
+                  <Text>{user?.companyDetails?.companyName || "—"}</Text>
+                </>
+              )}
+              {user.role === "driver" && (
+                <>
+                  <Text strong>License Number:</Text>
+                  <Text>{user?.driverDetails?.licenseNumber || "—"}</Text>
+                  <Text strong>Status:</Text>
+                  <Text>{user?.driverDetails?.status || "—"}</Text>
+                </>
+              )}
+              <Text strong>Role:</Text> <Text>{user?.role}</Text>
               <Button danger style={{ marginTop: 16 }} onClick={handleLogout}>
                 Logout
               </Button>
@@ -199,14 +209,6 @@ function ProfilePage() {
               </Form.Item>
 
               <Form.Item name="phone" label="Phone">
-                <Input />
-              </Form.Item>
-
-              <Form.Item name="company" label="Company">
-                <Input />
-              </Form.Item>
-
-              <Form.Item name="position" label="Position">
                 <Input />
               </Form.Item>
 

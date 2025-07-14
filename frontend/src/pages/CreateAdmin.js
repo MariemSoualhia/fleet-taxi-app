@@ -1,13 +1,10 @@
 import React from "react";
-import { Form, Input, Button, Select, message } from "antd";
+import { Form, Input, Button, message } from "antd";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
-const { Option } = Select;
-
 function CreateAdmin({ onSuccess, onCancel }) {
   const { token } = useAuth();
-
   const [form] = Form.useForm();
 
   const handleFinish = async (values) => {
@@ -17,8 +14,7 @@ function CreateAdmin({ onSuccess, onCancel }) {
         {
           name: values.name,
           email: values.email,
-          password: values.password,
-          role: "admin", // fixe ici le rôle admin, sinon tu peux rendre dynamique
+          phone: values.phone,
         },
         {
           headers: {
@@ -27,14 +23,13 @@ function CreateAdmin({ onSuccess, onCancel }) {
         }
       );
 
-      message.success("Admin créé avec succès !");
+      message.success("Admin created successfully!");
       form.resetFields();
       if (onSuccess) onSuccess();
     } catch (error) {
-      console.error("Erreur création admin:", error);
+      console.error("Error creating admin:", error);
       const errMsg =
-        error.response?.data?.message ||
-        "Erreur lors de la création de l'admin";
+        error.response?.data?.message || "Error while creating admin";
       message.error(errMsg);
     }
   };
@@ -44,53 +39,40 @@ function CreateAdmin({ onSuccess, onCancel }) {
       form={form}
       layout="vertical"
       onFinish={handleFinish}
-      initialValues={{ role: "admin" }}
+      autoComplete="off"
     >
       <Form.Item
         name="name"
-        label="Nom"
-        rules={[{ required: true, message: "Veuillez entrer le nom" }]}
+        label="Name"
+        rules={[{ required: true, message: "Please enter the name" }]}
       >
-        <Input placeholder="Nom complet" />
+        <Input placeholder="Full name" />
       </Form.Item>
 
       <Form.Item
         name="email"
         label="Email"
         rules={[
-          { required: true, message: "Veuillez entrer l'email" },
-          { type: "email", message: "Email invalide" },
+          { required: true, message: "Please enter the email" },
+          { type: "email", message: "Invalid email address" },
         ]}
       >
         <Input placeholder="email@example.com" />
       </Form.Item>
 
       <Form.Item
-        name="password"
-        label="Mot de passe"
-        rules={[
-          { required: true, message: "Veuillez entrer un mot de passe" },
-          {
-            min: 6,
-            message: "Le mot de passe doit faire au moins 6 caractères",
-          },
-        ]}
+        name="phone"
+        label="Phone"
+        rules={[{ required: true, message: "Please enter the phone number" }]}
       >
-        <Input.Password placeholder="Mot de passe" />
+        <Input placeholder="+1 123 456 7890" />
       </Form.Item>
-
-      {/* Optionnel si tu veux un select de rôles (mais ici on fixe admin) */}
-      {/* <Form.Item name="role" label="Rôle">
-        <Select disabled>
-          <Option value="admin">Admin</Option>
-        </Select>
-      </Form.Item> */}
 
       <Form.Item>
         <Button type="primary" htmlType="submit" style={{ marginRight: 8 }}>
-          Créer
+          Create
         </Button>
-        <Button onClick={onCancel}>Annuler</Button>
+        <Button onClick={onCancel}>Cancel</Button>
       </Form.Item>
     </Form>
   );

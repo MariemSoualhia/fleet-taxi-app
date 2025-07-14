@@ -20,9 +20,12 @@ export const AuthProvider = ({ children }) => {
           email: decoded.email || "",
           role: decoded.role || "",
           phone: decoded.phone || "",
-          company: decoded.company || "",
-          position: decoded.position || "",
           profileImage: decoded.profileImage || "",
+
+          companyDetails: decoded.companyDetails || null,
+          admin: decoded.admin || null,
+          superAdmin: decoded.superAdmin || null,
+          driverDetails: decoded.driverDetails || null,
         });
       } catch (error) {
         console.error("Erreur de décodage:", error);

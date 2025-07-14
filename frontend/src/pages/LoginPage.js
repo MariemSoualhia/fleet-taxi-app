@@ -26,6 +26,7 @@ function LoginPage() {
       const data = await loginUser(values.email, values.password);
       console.log("login terminé");
       if (data && data.token && data.user) {
+        console.log(data);
         login(data.user, data.token); // utilise la fonction du contexte
 
         setAlertSeverity("success");

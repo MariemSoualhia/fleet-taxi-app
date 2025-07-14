@@ -15,6 +15,7 @@ function RegisterPage() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [alertSeverity, setAlertSeverity] = useState("success");
   const [alertMessage, setAlertMessage] = useState("");
+  const [selectedRole, setSelectedRole] = useState(null);
 
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
@@ -64,10 +65,63 @@ function RegisterPage() {
           </Form.Item>
 
           <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-            <Select placeholder="Select role">
-              <Option value="admin">Admin</Option>
+            <Select
+              placeholder="Select role"
+              onChange={(value) => setSelectedRole(value)}
+            >
+              <Option value="superAdmin">Super Admin</Option>
+              {/* D'autres rôles ici si besoin */}
             </Select>
           </Form.Item>
+
+          {selectedRole === "superAdmin" && (
+            <>
+              <Form.Item
+                name={["companyDetails", "companyName"]}
+                label="Company Name"
+                rules={[
+                  { required: true, message: "Company name is required" },
+                ]}
+              >
+                <Input placeholder="Company Name" />
+              </Form.Item>
+
+              <Form.Item
+                name={["companyDetails", "companyAddress"]}
+                label="Company Address"
+              >
+                <Input placeholder="Company Address" />
+              </Form.Item>
+
+              <Form.Item
+                name={["companyDetails", "companyEmail"]}
+                label="Company Email"
+              >
+                <Input placeholder="Company Email" />
+              </Form.Item>
+
+              <Form.Item
+                name={["companyDetails", "companyPhone"]}
+                label="Company Phone"
+              >
+                <Input placeholder="Company Phone" />
+              </Form.Item>
+
+              <Form.Item
+                name={["companyDetails", "website"]}
+                label="Company Website"
+              >
+                <Input placeholder="Company Website" />
+              </Form.Item>
+
+              <Form.Item
+                name={["companyDetails", "description"]}
+                label="Company Description"
+              >
+                <Input.TextArea placeholder="Company Description" />
+              </Form.Item>
+            </>
+          )}
 
           <Form.Item>
             <Button

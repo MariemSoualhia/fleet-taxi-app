@@ -284,7 +284,7 @@ function DriversPage() {
             <Input placeholder="Enter email" />
           </Form.Item>
 
-          {!editingDriver && (
+          {/* {!editingDriver && (
             <Form.Item
               name="password"
               label="Password"
@@ -292,7 +292,7 @@ function DriversPage() {
             >
               <Input.Password placeholder="Enter password" />
             </Form.Item>
-          )}
+          )} */}
 
           <Form.Item name="phone" label="Phone">
             <Input placeholder="Enter phone" />

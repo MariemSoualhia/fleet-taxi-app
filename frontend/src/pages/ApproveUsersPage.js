@@ -16,10 +16,8 @@ function ApproveUsersPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log("r22", res);
-      const pendingUsers = res.data.filter(
-        (u) => !u.isApproved && u.role !== "superAdmin"
-      );
-      setUsers(pendingUsers);
+
+      setUsers(res.data);
     } catch (error) {
       console.error("Error fetching users:", error);
       message.error("Failed to load pending users.");

@@ -10,6 +10,8 @@ import {
   Popconfirm,
   InputNumber,
   Tooltip,
+  Input,
+  Tag,
 } from "antd";
 import {
   PlusOutlined,
@@ -32,7 +34,10 @@ const Alert = MuiAlert;
 function TripsPage() {
   const [trips, setTrips] = useState([]);
   const [drivers, setDrivers] = useState([]);
-  const [trucks, setTrucks] = useState([]);
+  const [taxis, setTaxis] = useState([]);
+  const [filteredTaxis, setFilteredTaxis] = useState([]);
+  const [filterTripStatus, setFilterTripStatus] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState(null);
@@ -41,15 +46,18 @@ function TripsPage() {
   const [alertMessage, setAlertMessage] = useState("");
   const [form] = Form.useForm();
   const { user } = useAuth();
+  const [formValid, setFormValid] = useState(false);
+
   const navigate = useNavigate();
 
   const [filterDriver, setFilterDriver] = useState("");
-  const [filterTruck, setFilterTruck] = useState("");
+  const [filterTaxi, setFilterTaxi] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterStartLocation, setFilterStartLocation] = useState("");
 
   const handleCloseSnackbar = () => setSnackbarOpen(false);
 
+  // Fetch trips
   const fetchTrips = async () => {
     try {
       setLoading(true);
@@ -65,19 +73,20 @@ function TripsPage() {
     }
   };
 
-  const fetchDriversAndTrucks = async () => {
+  // Fetch drivers and taxis
+  const fetchDriversAndTaxis = async () => {
     try {
       const token = localStorage.getItem("token");
-      const [driversRes, trucksRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/drivers", {
+      const [driversRes, taxisRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/users/driversbyadmin", {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get("http://localhost:5000/api/trucks", {
+        axios.get("http://localhost:5000/api/taxis", {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
       setDrivers(driversRes.data);
-      setTrucks(trucksRes.data);
+      setTaxis(taxisRes.data);
     } catch (err) {
       console.error(err);
     }
@@ -85,15 +94,70 @@ function TripsPage() {
 
   useEffect(() => {
     fetchTrips();
-    fetchDriversAndTrucks();
+    fetchDriversAndTaxis();
   }, []);
 
+  // When driver changes, filter taxis linked to that driver
+  const onDriverChange = (driverId) => {
+    console.log("Selected driverId:", driverId);
+    form.setFieldsValue({ taxiId: null });
+    setFilterTaxi("");
+
+    if (!driverId) {
+      setFilteredTaxis([]);
+      return;
+    }
+
+    const filtered = taxis.filter((taxi) => {
+      if (!taxi.assignedDriver) return false;
+
+      const assignedDriverId =
+        typeof taxi.assignedDriver === "object" && taxi.assignedDriver._id
+          ? taxi.assignedDriver._id.toString()
+          : taxi.assignedDriver.toString();
+
+      return assignedDriverId === driverId;
+    });
+
+    console.log("Filtered taxis:", filtered);
+    setFilteredTaxis(filtered);
+  };
+
+  const handleEdit = (trip) => {
+    setEditingTrip(trip);
+    console.log(trip);
+    form.setFieldsValue({
+      ...trip,
+      driverId: trip.taxiId?.assignedDriver?._id || null, // ✅ mettre l'ID ici
+      taxiId: trip.taxiId?._id,
+      startTime: dayjs(trip.startTime),
+      endTime: dayjs(trip.endTime),
+    });
+
+    // Filtrage des taxis en fonction du driver si nécessaire
+    const filteredTaxis = taxis.filter(
+      (taxi) =>
+        !trip.taxiId?.assignedDriver?._id ||
+        taxi.assignedDriver?._id === trip.taxiId?.assignedDriver?._id
+    );
+    setFilteredTaxis(filteredTaxis);
+
+    setIsModalOpen(true);
+  };
+
+  // Submit form handler
   const onFinish = async (values) => {
     const token = localStorage.getItem("token");
+    // Récupérer userId, adminId, superAdminId depuis le contexte/auth ou le localStorage
+    // Ici un exemple fictif, adapte selon ta gestion d’authentification
+    const user = JSON.parse(localStorage.getItem("user")); // ou autre source
+
     const payload = {
       ...values,
       startTime: values.startTime.toISOString(),
       endTime: values.endTime.toISOString(),
+      admin: user.role === "admin" ? user._id : undefined,
+      superAdmin: user.role === "superAdmin" ? user._id : undefined,
     };
 
     try {
@@ -118,6 +182,7 @@ function TripsPage() {
       fetchTrips();
       setEditingTrip(null);
       form.resetFields();
+      setFilteredTaxis([]);
     } catch (error) {
       setAlertSeverity("error");
       setAlertMessage(
@@ -127,18 +192,9 @@ function TripsPage() {
     }
   };
 
-  const handleEdit = (trip) => {
-    setEditingTrip(trip);
-    form.setFieldsValue({
-      ...trip,
-      driverId: trip.driverId?._id,
-      truckId: trip.truckId?._id,
-      startTime: dayjs(trip.startTime),
-      endTime: dayjs(trip.endTime),
-    });
-    setIsModalOpen(true);
-  };
+  // Edit trip handler
 
+  // Delete trip handler
   const handleDelete = async (id) => {
     try {
       const token = localStorage.getItem("token");
@@ -156,11 +212,13 @@ function TripsPage() {
     }
   };
 
+  // Filtering trips for display
   const filteredTrips = trips.filter((trip) => {
     return (
-      (!filterDriver || trip.driverId?.name === filterDriver) &&
-      (!filterTruck || trip.truckId?.plateNumber === filterTruck) &&
+      (!filterDriver || trip.taxiId?.assignedDriver?._id === filterDriver) &&
+      (!filterTaxi || trip.taxiId?.plateNumber === filterTaxi) &&
       (!filterStatus || trip.deliveryStatus === filterStatus) &&
+      (!filterTripStatus || trip.tripStatus === filterTripStatus) &&
       (!filterStartLocation ||
         trip.startLocation
           ?.toLowerCase()
@@ -175,50 +233,76 @@ function TripsPage() {
       <div
         style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 16 }}
       >
-        <Select
-          placeholder="Driver"
-          style={{ width: 180 }}
-          value={filterDriver}
-          onChange={setFilterDriver}
-          allowClear
-        >
-          {drivers.map((d) => (
-            <Option key={d._id} value={d.name}>
-              {d.name}
-            </Option>
-          ))}
-        </Select>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <label style={{ marginBottom: 4 }}>Driver</label>
+          <Select
+            placeholder="Driver"
+            style={{ width: 180 }}
+            value={filterDriver}
+            onChange={setFilterDriver}
+            allowClear
+          >
+            {drivers.map((d) => (
+              <Option key={d._id} value={d._id}>
+                {d.name}
+              </Option>
+            ))}
+          </Select>
+        </div>
 
-        <Select
-          placeholder="Truck"
-          style={{ width: 180 }}
-          value={filterTruck}
-          onChange={setFilterTruck}
-          allowClear
-        >
-          {trucks.map((t) => (
-            <Option key={t._id} value={t.plateNumber}>
-              {t.plateNumber}
-            </Option>
-          ))}
-        </Select>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <label style={{ marginBottom: 4 }}>Taxi</label>
+          <Select
+            placeholder="Taxi"
+            style={{ width: 180 }}
+            value={filterTaxi}
+            onChange={setFilterTaxi}
+            allowClear
+          >
+            {taxis.map((t) => (
+              <Option key={t._id} value={t.plateNumber}>
+                {t.plateNumber}
+              </Option>
+            ))}
+          </Select>
+        </div>
 
-        <Select
-          placeholder="Status"
-          style={{ width: 180 }}
-          value={filterStatus}
-          onChange={setFilterStatus}
-          allowClear
-        >
-          <Option value="on-time">On-Time</Option>
-          <Option value="delayed">Delayed</Option>
-        </Select>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <label style={{ marginBottom: 4 }}>Status</label>
+          <Select
+            placeholder="Status"
+            style={{ width: 180 }}
+            value={filterStatus}
+            onChange={setFilterStatus}
+            allowClear
+          >
+            <Option value="on-time">On-Time</Option>
+            <Option value="delayed">Delayed</Option>
+          </Select>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <label style={{ marginBottom: 4 }}>Trip Status</label>
+          <Select
+            placeholder="Trip Status"
+            style={{ width: 180 }}
+            value={filterTripStatus}
+            onChange={setFilterTripStatus}
+            allowClear
+          >
+            <Option value="ongoing">Ongoing</Option>
+            <Option value="completed">Completed</Option>
+            <Option value="cancelled">Cancelled</Option>
+          </Select>
+        </div>
 
-        <AddressAutoComplete
-          value={filterStartLocation}
-          onChange={setFilterStartLocation}
-          placeholder="Start Location Filter"
-        />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <label style={{ marginBottom: 4 }}>Start Location</label>
+          <AddressAutoComplete
+            value={filterStartLocation}
+            onChange={setFilterStartLocation}
+            placeholder="Start Location Filter"
+          />
+        </div>
 
         <Tooltip title="Reset Filters">
           <Button
@@ -226,9 +310,10 @@ function TripsPage() {
             icon={<ReloadOutlined />}
             onClick={() => {
               setFilterDriver("");
-              setFilterTruck("");
+              setFilterTaxi("");
               setFilterStatus("");
               setFilterStartLocation("");
+              setFilterTripStatus("");
             }}
           />
         </Tooltip>
@@ -236,7 +321,12 @@ function TripsPage() {
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            form.resetFields();
+            setFilteredTaxis([]);
+            setEditingTrip(null);
+            setIsModalOpen(true);
+          }}
         >
           Add Trip
         </Button>
@@ -244,10 +334,16 @@ function TripsPage() {
 
       <Table
         columns={[
-          { title: "Driver", render: (_, r) => r.driverId?.name || "-" },
-          { title: "Truck", render: (_, r) => r.truckId?.plateNumber || "-" },
-          { title: "Start", dataIndex: "startLocation" },
-          { title: "End", dataIndex: "endLocation" },
+          {
+            title: "Driver",
+            dataIndex: ["taxiId", "assignedDriver", "name"],
+            key: "driver",
+            render: (text) => text || "-",
+          },
+
+          { title: "Taxi", render: (_, r) => r.taxiId?.plateNumber || "-" },
+          { title: "Start Location", dataIndex: "startLocation" },
+          { title: "End Location", dataIndex: "endLocation" },
           {
             title: "Start Time",
             render: (_, r) => dayjs(r.startTime).format("YYYY-MM-DD HH:mm"),
@@ -257,9 +353,22 @@ function TripsPage() {
             render: (_, r) => dayjs(r.endTime).format("YYYY-MM-DD HH:mm"),
           },
           { title: "Distance (km)", dataIndex: "distanceDriven" },
-          { title: "Fuel (L)", dataIndex: "fuelUsed" },
+          { title: "Fuel Used (L)", dataIndex: "fuelUsed" },
           { title: "Status", dataIndex: "deliveryStatus" },
-          { title: "Reason", dataIndex: "delayReason" },
+          { title: "Delay Reason", dataIndex: "delayReason" },
+          {
+            title: "Trip Status",
+            dataIndex: "tripStatus",
+            key: "tripStatus",
+            render: (status) => {
+              const colorMap = {
+                ongoing: "blue",
+                completed: "green",
+                cancelled: "red",
+              };
+              return <Tag color={colorMap[status] || "default"}>{status}</Tag>;
+            },
+          },
           {
             title: "Map",
             render: (_, r) => (
@@ -276,6 +385,7 @@ function TripsPage() {
               />
             ),
           },
+
           {
             title: "Actions",
             render: (_, r) => (
@@ -286,7 +396,7 @@ function TripsPage() {
                   onClick={() => handleEdit(r)}
                 />
                 <Popconfirm
-                  title="Delete trip?"
+                  title="Delete this trip?"
                   onConfirm={() => handleDelete(r._id)}
                 >
                   <Button icon={<DeleteOutlined />} type="text" danger />
@@ -301,21 +411,40 @@ function TripsPage() {
       />
 
       <Modal
+        okButtonProps={{ disabled: !formValid }}
         open={isModalOpen}
         title={editingTrip ? "Edit Trip" : "Add Trip"}
         onCancel={() => {
           setEditingTrip(null);
           setIsModalOpen(false);
+          setFilteredTaxis([]);
+          form.resetFields();
         }}
         onOk={() => form.submit()}
+        destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          onFieldsChange={() => {
+            const hasErrors = form
+              .getFieldsError()
+              .some(({ errors }) => errors.length > 0);
+            setFormValid(!hasErrors);
+          }}
+        >
+          {" "}
           <Form.Item
             name="driverId"
             label="Driver"
-            rules={[{ required: true }]}
+            rules={[{ required: true, message: "Please select a driver" }]}
           >
-            <Select placeholder="Select Driver">
+            <Select
+              placeholder="Select Driver"
+              onChange={onDriverChange}
+              allowClear
+            >
               {drivers.map((d) => (
                 <Option key={d._id} value={d._id}>
                   {d.name}
@@ -323,124 +452,145 @@ function TripsPage() {
               ))}
             </Select>
           </Form.Item>
-
-          <Form.Item name="truckId" label="Truck" rules={[{ required: true }]}>
-            <Select placeholder="Select Truck">
-              {trucks.map((t) => (
+          <Form.Item
+            name="taxiId"
+            label="Taxi"
+            rules={[{ required: true, message: "Please select a taxi" }]}
+          >
+            <Select
+              placeholder={
+                filteredTaxis.length === 0
+                  ? "Select a driver first"
+                  : "Select Taxi"
+              }
+              disabled={filteredTaxis.length === 0}
+              allowClear
+            >
+              {filteredTaxis.map((t) => (
                 <Option key={t._id} value={t._id}>
                   {t.plateNumber}
                 </Option>
               ))}
             </Select>
           </Form.Item>
-
           <Form.Item
             name="startLocation"
-            label="Start Address"
-            rules={[{ required: true }]}
+            label="Start Location"
+            rules={[{ required: true, message: "Please enter start location" }]}
           >
-            <AddressAutoComplete
-              value={form.getFieldValue("startLocation")}
-              onChange={(val) => form.setFieldValue("startLocation", val)}
-              placeholder="Type an address (e.g. 10 rue...)"
-            />
+            <AddressAutoComplete />
           </Form.Item>
-
           <Form.Item
             name="endLocation"
-            label="End Address"
-            rules={[{ required: true }]}
+            label="End Location"
+            rules={[{ required: true, message: "Please enter end location" }]}
           >
-            <AddressAutoComplete
-              value={form.getFieldValue("endLocation")}
-              onChange={(val) => form.setFieldValue("endLocation", val)}
-              placeholder="Type an address (e.g. 1 avenue...)"
-            />
+            <AddressAutoComplete />
           </Form.Item>
-
           <Form.Item
             name="startTime"
             label="Start Time"
-            rules={[{ required: true }]}
+            rules={[{ required: true, message: "Please select start time" }]}
           >
-            <DatePicker showTime style={{ width: "100%" }} />
+            <DatePicker
+              showTime
+              style={{ width: "100%" }}
+              format="YYYY-MM-DD HH:mm"
+            />
           </Form.Item>
-
           <Form.Item
             name="endTime"
             label="End Time"
-            rules={[{ required: true }]}
+            rules={[{ required: true, message: "Please select end time" }]}
           >
-            <DatePicker showTime style={{ width: "100%" }} />
+            <DatePicker
+              showTime
+              style={{ width: "100%" }}
+              format="YYYY-MM-DD HH:mm"
+            />
           </Form.Item>
-
-          <Form.Item name="distanceDriven" label="Distance (km)">
-            <InputNumber min={0} style={{ width: "100%" }} />
+          <Form.Item
+            name="distanceDriven"
+            label="Distance Driven (km)"
+            rules={[
+              { required: true, message: "Please enter distance driven" },
+              {
+                type: "number",
+                min: 0,
+                message: "Distance must be positive",
+              },
+            ]}
+          >
+            <InputNumber style={{ width: "100%" }} min={0} />
           </Form.Item>
-
-          <Form.Item name="fuelUsed" label="Fuel Used (L)">
-            <InputNumber min={0} style={{ width: "100%" }} />
+          <Form.Item
+            name="fuelUsed"
+            label="Fuel Used (L)"
+            rules={[
+              { required: true, message: "Please enter fuel used" },
+              {
+                type: "number",
+                min: 0,
+                message: "Fuel used must be positive",
+              },
+            ]}
+          >
+            <InputNumber style={{ width: "100%" }} min={0} />
           </Form.Item>
-
-          <Form.Item name="deliveryStatus" label="Status">
-            <Select>
+          <Form.Item
+            name="deliveryStatus"
+            label="Delivery Status"
+            rules={[{ required: true, message: "Please select status" }]}
+          >
+            <Select placeholder="Select status">
               <Option value="on-time">On-Time</Option>
               <Option value="delayed">Delayed</Option>
             </Select>
           </Form.Item>
-
-          <Form.Item name="delayReason" label="Delay Reason">
-            <InputNumber style={{ width: "100%" }} />
-          </Form.Item>
-
-          {/* ⬇️ ADD THIS BUTTON HERE */}
-          <Button
-            type="dashed"
-            block
-            onClick={async () => {
-              const values = form.getFieldsValue();
-              const { startLocation, endLocation, truckId } = values;
-              if (!startLocation || !endLocation || !truckId) {
-                return alert(
-                  "Please fill in start location, end location, and truck."
-                );
-              }
-              try {
-                const { data } = await axios.post(
-                  "http://localhost:5000/api/trips/estimate",
-                  { startLocation, endLocation, truckId },
-                  {
-                    headers: {
-                      Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
+          <Form.Item
+            name="delayReason"
+            label="Delay Reason"
+            dependencies={["deliveryStatus"]}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (getFieldValue("deliveryStatus") === "delayed" && !value) {
+                    return Promise.reject(
+                      new Error("Please specify delay reason")
+                    );
                   }
-                );
-                alert(
-                  `Estimated Distance: ${data.estimatedDistance.toFixed(
-                    1
-                  )} km\nEstimated Fuel: ${data.estimatedFuel.toFixed(1)} L`
-                );
-              } catch (e) {
-                alert("No estimation available for this trip.");
-              }
-            }}
+                  return Promise.resolve();
+                },
+              }),
+            ]}
           >
-            Estimate Fuel & Distance
-          </Button>
+            <Input.TextArea
+              disabled={form.getFieldValue("deliveryStatus") !== "delayed"}
+            />
+          </Form.Item>
+          <Form.Item
+            name="tripStatus"
+            label="Trip Status"
+            rules={[{ required: true, message: "Please select a trip status" }]}
+          >
+            <Select placeholder="Select trip status" allowClear>
+              <Option value="ongoing">Ongoing</Option>
+              <Option value="completed">Completed</Option>
+              <Option value="cancelled">Cancelled</Option>
+            </Select>
+          </Form.Item>
         </Form>
       </Modal>
 
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000}
+        autoHideDuration={4000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
-          elevation={6}
-          variant="filled"
           onClose={handleCloseSnackbar}
           severity={alertSeverity}
+          sx={{ width: "100%" }}
         >
           {alertMessage}
         </Alert>

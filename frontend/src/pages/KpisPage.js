@@ -71,11 +71,11 @@ function KpisPage() {
       ? (kpis.totalDistanceDriven / kpis.totalTrips).toFixed(2)
       : 0;
 
-  const trucksData = {
-    labels: ["Available Trucks", "In Maintenance"],
+  const taxisData = {
+    labels: ["Available Taxis", "In Maintenance"],
     datasets: [
       {
-        data: [kpis.availableTrucks, kpis.inMaintenanceTrucks],
+        data: [kpis.availableTaxis, kpis.inMaintenanceTaxis],
         backgroundColor: ["#52c41a", "#faad14"],
       },
     ],
@@ -191,7 +191,7 @@ function KpisPage() {
                 height: "120px",
               }}
             >
-              <h3>Total Trucks</h3>
+              <h3>Total Taxis</h3>
               <h1
                 style={{
                   marginTop: "10px",
@@ -199,7 +199,7 @@ function KpisPage() {
                   color: "#faad14",
                 }}
               >
-                {kpis.totalTrucks}
+                {kpis.totalTaxis}
               </h1>
             </Card>
           </motion.div>
@@ -317,10 +317,10 @@ function KpisPage() {
             animate="visible"
           >
             <Card
-              title="Trucks Status"
+              title="Taxis Status"
               style={{ borderRadius: "12px", height: "400px" }}
             >
-              <Pie data={trucksData} height={300} />
+              <Pie data={taxisData} height={300} />
             </Card>
           </motion.div>
         </Col>

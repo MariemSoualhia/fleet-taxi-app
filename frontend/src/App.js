@@ -12,11 +12,11 @@ import DriversPage from "./pages/DriversPage";
 import DashboardLayout from "./components/DashboardLayout";
 // import TrucksPage from "./pages/TrucksPage";
 import TripsPage from "./pages/TripsPage";
-// import KpisPage from "./pages/KpisPage";
+import KpisPage from "./pages/KpisPage";
 import AlertsPage from "./pages/AlertsPage";
 import AlertsAnalyticsPage from "./pages/AlertsAnalyticsPage";
-// import ReportsPage from "./pages/ReportsPage";
-// import ReportsHistoryPage from "./pages/ReportsHistoryPage";
+import ReportsPage from "./pages/ReportsPage";
+import ReportsHistoryPage from "./pages/ReportsHistoryPage";
 import ProfilePage from "./pages/ProfilePage";
 import ApproveUsersPage from "./pages/ApproveUsersPage";
 // import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -62,6 +62,9 @@ function App() {
             <Route path="alerts-analytics" element={<AlertsAnalyticsPage />} />
             <Route path="leave-request" element={<DriverLeaveRequestPage />} />
             <Route path="leaves" element={<LeaveManagementPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="/reports-history" element={<ReportsHistoryPage />} />
+            <Route path="kpis" element={<KpisPage />} />
             {/* <Route path="drivers" element={<DriversPage />} />
             <Route path="Trucks" element={<TrucksPage />} />
             <Route path="trips" element={<TripsPage />} />

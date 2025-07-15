@@ -25,13 +25,17 @@ app.use("/api/users", usersRoutes);
 app.use("/api/taxis", taxisRoutes);
 app.use("/api/trips", tripRoutes);
 const alertRoutes = require("./routes/alertRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
+app.use("/api/reports", reportRoutes);
 app.use("/api/alerts", alertRoutes);
 
 // Serve uploaded images statically
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/leaves", leaveRoutes);
+const kpiRoutes = require("./routes/kpiRoutes");
 
+app.use("/api/kpis", kpiRoutes);
 // ➡️ Démarrer le cron job
 scheduleMaintenanceCheck();
 const PORT = process.env.PORT || 5000;

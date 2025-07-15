@@ -9,6 +9,8 @@ import {
   CheckCircleOutlined,
   AlertOutlined,
   CalendarOutlined,
+  FileSearchOutlined,
+  LineChartOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -59,6 +61,21 @@ function Sidebar() {
         icon: <CalendarOutlined />,
         label: "Leave Management",
       },
+      {
+        key: "reports",
+        icon: <FileSearchOutlined />,
+        label: "Reports",
+      },
+      {
+        key: "reports-history",
+        icon: <FileSearchOutlined />,
+        label: "Reports History",
+      },
+      {
+        key: "kpis",
+        icon: <LineChartOutlined />,
+        label: "KPIs",
+      },
     ],
     admin: [
       { key: "dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
@@ -66,6 +83,11 @@ function Sidebar() {
       { key: "taxis", icon: <CarOutlined />, label: "Vehicles" },
       { key: "trips", icon: <SolutionOutlined />, label: "Trips" },
       { key: "alerts", icon: <AlertOutlined />, label: "Alerts" },
+      {
+        key: "reports",
+        icon: <FileSearchOutlined />,
+        label: "Reports",
+      },
 
       {
         key: "alerts-analytics",

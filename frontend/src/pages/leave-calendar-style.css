@@ -1,0 +1,23 @@
+.custom-calendar {
+  font-size: 10px;
+}
+
+.custom-calendar .ant-picker-cell {
+  padding: 4px;
+}
+.custom-calendar .ant-picker-cell-inner {
+  padding: 0 !important;
+}
+.events {
+  padding-left: 0;
+  margin: 0;
+}
+
+.events li {
+  list-style: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px; /* largeur max des items pour éviter débordement */
+  margin-bottom: 2px;
+}

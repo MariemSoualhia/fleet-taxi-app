@@ -1,8 +1,29 @@
 // src/pages/LeaveManagementPage.js
 import React, { useEffect, useState } from "react";
-import { Table, Tag, Button, message, Popconfirm } from "antd";
+import {
+  Table,
+  Tag,
+  Button,
+  message,
+  Popconfirm,
+  Calendar,
+  Badge,
+  ConfigProvider,
+} from "antd";
 import axios from "axios";
+import { Tooltip } from "antd";
+
 import { useAuth } from "../context/AuthContext";
+import "./leave-calendar-style.css";
+
+import dayjs from "dayjs";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import "dayjs/locale/en";
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
+dayjs.locale("en");
 
 function LeaveManagementPage() {
   const [leaves, setLeaves] = useState([]);
@@ -18,7 +39,7 @@ function LeaveManagementPage() {
       });
       setLeaves(res.data);
     } catch (error) {
-      message.error("Error fetching leaves");
+      message.error("Error loading leaves");
     } finally {
       setLoading(false);
     }
@@ -34,22 +55,70 @@ function LeaveManagementPage() {
 
       await axios.put(
         url,
-        {}, // Pas besoin de body
+        {},
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      message.success(`Leave ${status} successfully`);
-      fetchLeaves(); // Refresh the list
+      message.success(
+        `Leave successfully ${status === "approved" ? "approved" : "rejected"}`
+      );
+      fetchLeaves();
     } catch (error) {
-      message.error("Failed to update leave status");
+      message.error("Failed to update status");
     }
   };
 
   useEffect(() => {
     fetchLeaves();
   }, []);
+
+  const approvedLeaves = leaves.filter((leave) => leave.status === "approved");
+
+  const dateCellRender = (value) => {
+    const current = dayjs(value);
+    const leavesOnDate = approvedLeaves.filter((leave) => {
+      const start = dayjs(leave.startDate);
+      const end = dayjs(leave.endDate);
+      return (
+        current.isSameOrAfter(start, "day") &&
+        current.isSameOrBefore(end, "day")
+      );
+    });
+
+    // Unique par driver pour éviter doublons
+    const uniqueLeaves = [];
+    const seenDrivers = new Set();
+    for (const leave of leavesOnDate) {
+      if (!seenDrivers.has(leave.driver?._id)) {
+        uniqueLeaves.push(leave);
+        seenDrivers.add(leave.driver?._id);
+      }
+    }
+
+    return (
+      <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+        {uniqueLeaves.map((leave) => (
+          <Tooltip
+            key={leave._id}
+            title={leave.driver?.name || "Driver"}
+            placement="top"
+          >
+            <div
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                border: "2px solid red",
+                cursor: "pointer",
+              }}
+            />
+          </Tooltip>
+        ))}
+      </div>
+    );
+  };
 
   const columns = [
     {
@@ -117,12 +186,48 @@ function LeaveManagementPage() {
   return (
     <div style={{ padding: 24 }}>
       <h2>Leave Management</h2>
-      <Table
-        dataSource={leaves}
-        columns={columns}
-        rowKey="_id"
-        loading={loading}
-      />
+
+      <div
+        style={{
+          display: "flex",
+          marginTop: 20,
+          gap: 24 /* espace entre colonnes */,
+        }}
+      >
+        {/* Table prend 2/3 */}
+        <div style={{ flex: 2 }}>
+          <Table
+            dataSource={leaves}
+            columns={columns}
+            rowKey="_id"
+            loading={loading}
+            pagination={{ pageSize: 8 }}
+            scroll={{ x: "max-content" }}
+          />
+        </div>
+
+        {/* Calendrier prend 1/3 */}
+        <div
+          className="custom-calendar"
+          style={{
+            flex: 1,
+            maxWidth: 400,
+            minWidth: 300,
+            height: 400,
+            overflowY: "auto",
+            border: "1px solid #f0f0f0",
+            borderRadius: 6,
+            padding: 16,
+            boxShadow: "0 2px 8px rgb(0 0 0 / 0.1)",
+            background: "white",
+          }}
+        >
+          <h3>Approved Leaves Calendar</h3>
+          <ConfigProvider>
+            <Calendar fullscreen={false} dateCellRender={dateCellRender} />
+          </ConfigProvider>
+        </div>
+      </div>
     </div>
   );
 }

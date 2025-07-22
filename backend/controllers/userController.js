@@ -3,6 +3,8 @@ const User = require("../models/User");
 const sendNotification = require("../utils/sendNotification");
 const sendEmail = require("../utils/sendEmail");
 const generatePassword = require("generate-password");
+const nodemailer = require("nodemailer");
+
 const getAdmins = async (req, res) => {
   try {
     console.log(req.user);
@@ -337,6 +339,7 @@ const forgotPassword = async (req, res) => {
 
     res.json({ message: "Temporary password sent to your email." });
   } catch (err) {
+    console.log(err);
     res.status(500).json({ message: "Error processing request." });
   }
 };

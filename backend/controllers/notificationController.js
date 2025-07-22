@@ -7,7 +7,7 @@ const getMyNotifications = async (req, res) => {
     const notifications = await Notification.find({
       user: req.user.id,
     }).sort({ createdAt: -1 });
-    console.log(notifications);
+
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ message: err.message });

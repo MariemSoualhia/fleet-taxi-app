@@ -19,7 +19,7 @@ import ReportsPage from "./pages/ReportsPage";
 import ReportsHistoryPage from "./pages/ReportsHistoryPage";
 import ProfilePage from "./pages/ProfilePage";
 import ApproveUsersPage from "./pages/ApproveUsersPage";
-// import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import MyTripsPageDriver from "./pages/MyTripsPageDriver";
 import TripMapPage from "./pages/TripMapPage";
 import AdminList from "./pages/AdminList";
@@ -27,6 +27,7 @@ import UserManagement from "./pages/UserManagement";
 import TaxisPage from "./pages/TaxisPage";
 import DriverLeaveRequestPage from "./pages/DriverLeaveRequestPage";
 import LeaveManagementPage from "./pages/LeaveManagementPage";
+import Messenger from "./pages/Messenger";
 function App() {
   const { user, loading } = useAuth();
 
@@ -43,7 +44,7 @@ function App() {
           element={token ? <Navigate to="/dashboard" /> : <LoginPage />}
         />
         <Route path="/register" element={<RegisterPage />} />
-        {/* <Route path="/forgot-password" element={<ForgotPasswordPage />} /> */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         {/* Protected routes */}
         {token && (
@@ -65,6 +66,7 @@ function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="/reports-history" element={<ReportsHistoryPage />} />
             <Route path="kpis" element={<KpisPage />} />
+            <Route path="Messenger" element={<Messenger />} />
             {/* <Route path="drivers" element={<DriversPage />} />
             <Route path="Trucks" element={<TrucksPage />} />
             <Route path="trips" element={<TripsPage />} />

@@ -105,11 +105,11 @@ function Navbar() {
 
     if (isOpening && unreadMessages > 0) {
       try {
-        await axios.put(
-          "http://localhost:5000/api/messages/mark-read-all",
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        // await axios.put(
+        //   "http://localhost:5000/api/messages/mark-read-all",
+        //   {},
+        //   { headers: { Authorization: `Bearer ${token}` } }
+        // );
         setUnreadMessages(0);
       } catch (err) {
         console.error("Erreur lors de la mise à jour des messages lus", err);
@@ -221,8 +221,8 @@ const styles = {
     top: 30,
     right: 0,
     zIndex: 1000,
-    width: 500,
-    height: 400,
+    width: 450,
+
     background: "#fff",
     boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
     borderRadius: 8,

@@ -12,13 +12,14 @@ const {
   getUnreadMessagesCount,
   getUnreadConversations,
   getUserConversationsWithUnread,
+  markReadConversation,
 } = require("../controllers/messageController");
 const conversationController = require("../controllers/conversationController");
 
 const router = express.Router();
 
 router.post("/", protect, sendMessage);
-router.get("/conversation/:userId", protect, getConversation);
+router.get("/conversations/:userId", protect, getConversation);
 router.get("/contacts", protect, getMyContacts);
 router.put("/mark-read-all/", protect, markMessagesAsRead);
 router.get("/available-contacts", protect, getAvailableContacts);
@@ -28,12 +29,18 @@ router.post("/conversations", conversationController.createConversation);
 router.put("/mark-read/:userId", protect, markMessagesAsRead);
 router.get("/unread-conversations", protect, getUserConversationsWithUnread);
 
-router.get(
-  "/conversations/:userId",
-  conversationController.getUserConversations
-);
+// router.get(
+//   "/conversations/:userId",
+//   protect,
+//   conversationController.getUserConversations
+// );
 
 // Messages
 router.get("/messages/:conversationId", getMessagesByConversation);
 router.get("/unread-count", protect, getUnreadMessagesCount);
+router.put(
+  "/mark-read-conversation/:conversationId",
+  protect,
+  markReadConversation
+);
 module.exports = router;

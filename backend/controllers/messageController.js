@@ -7,7 +7,7 @@ const sendMessage = async (req, res) => {
   try {
     const { conversationId, recipient, content } = req.body;
     const sender = req.user._id;
-    console.log(req.body);
+
     // Vérifier que le contenu n'est pas vide
     if (!content || !recipient || !conversationId) {
       return res.status(400).json({ message: "Informations manquantes." });
@@ -74,20 +74,58 @@ const getMessagesByConversation = async (req, res) => {
 };
 
 const getConversation = async (req, res) => {
-  const userId = req.user._id;
-  const otherId = req.params.userId;
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user._id);
 
-  const messages = await Message.find({
-    $or: [
-      { sender: userId, recipient: otherId },
-      { sender: otherId, recipient: userId },
-    ],
-  })
-    .sort({ createdAt: 1 })
-    .populate("sender", "name profileImage")
-    .populate("recipient", "name profileImage");
+    // Trouver une conversation où l'utilisateur est participant
+    const conversation = await mongoose.model("Conversation").findOne({
+      participants: userId,
+    });
 
-  res.json(messages);
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation non trouvée" });
+    }
+
+    // Trouver l'autre participant dans la conversation
+    const otherId = conversation.participants.find(
+      (id) => id.toString() !== userId.toString()
+    );
+
+    // Récupérer les messages de cette conversation
+    const messages = await Message.find({ conversationId: conversation._id })
+      .sort({ createdAt: 1 })
+      .populate("sender", "name profileImage")
+      .populate("recipient", "name profileImage")
+      .lean();
+
+    // Nombre de messages non lus pour l'utilisateur actuel
+    const unreadCount = messages.filter(
+      (msg) => !msg.read && msg.recipient._id.toString() === userId.toString()
+    ).length;
+
+    // Récupérer les infos des deux participants
+    const users = await User.find({
+      _id: { $in: [userId, otherId] },
+    })
+      .select("name profileImage role")
+      .lean();
+
+    const orderedParticipants = [userId, otherId].map((id) =>
+      users.find((u) => u._id.toString() === id.toString())
+    );
+
+    res.json([
+      {
+        conversationId: conversation._id,
+        participants: orderedParticipants,
+        unreadCount,
+        messages,
+      },
+    ]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
 };
 
 const getMyContacts = async (req, res) => {
@@ -166,7 +204,7 @@ const getAvailableContacts = async (req, res) => {
 };
 const getEligibleChatContacts = async (req, res) => {
   const userId = req.user.id;
-  console.log(userId);
+
   let eligibleUsers = [];
 
   const user = await User.findById(userId);
@@ -219,7 +257,7 @@ const getUnreadMessagesCount = async (req, res) => {
       read: false,
       //sender: { $ne: userId },
     });
-    console.log(count);
+
     res.json({ count });
   } catch (err) {
     console.error(err);
@@ -341,7 +379,35 @@ const getUserConversationsWithUnread = async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" });
   }
 };
+const markReadConversation = async (req, res) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user._id);
+    const conversationId = req.params.conversationId;
 
+    // Vérifie que conversationId est un ObjectId valide
+    if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+      return res.status(400).json({ error: "ID de conversation invalide" });
+    }
+
+    // Met à jour tous les messages non lus où le user est destinataire
+    const result = await Message.updateMany(
+      {
+        conversationId,
+        recipient: userId,
+        read: false,
+      },
+      { $set: { read: true } }
+    );
+
+    res.json({
+      message: "Messages marqués comme lus",
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
 module.exports = {
   sendMessage,
   getMessagesByConversation,
@@ -353,4 +419,5 @@ module.exports = {
   getEligibleChatContacts,
   getUnreadMessagesCount,
   getUserConversationsWithUnread,
+  markReadConversation,
 };

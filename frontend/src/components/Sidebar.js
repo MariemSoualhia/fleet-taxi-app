@@ -94,6 +94,11 @@ function Sidebar() {
         icon: <AlertOutlined />,
         label: "Alerts Analytics",
       },
+      {
+        key: "leave-request",
+        icon: <CalendarOutlined />,
+        label: "My leave request",
+      },
     ],
     driver: [
       { key: "dashboard", icon: <DashboardOutlined />, label: "Dashboard" },

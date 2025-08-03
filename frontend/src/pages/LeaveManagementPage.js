@@ -122,9 +122,14 @@ function LeaveManagementPage() {
 
   const columns = [
     {
-      title: "Driver",
-      dataIndex: ["driver", "name"],
-      key: "driver",
+      title: "Requester",
+      dataIndex: ["requester", "name"],
+      key: "requester ",
+    },
+    {
+      title: "Requester Role",
+      dataIndex: ["requester", "role"],
+      key: "role ",
     },
     {
       title: "Dates",

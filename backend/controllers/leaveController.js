@@ -7,39 +7,51 @@ const sendNotification = require("../utils/sendNotification");
 exports.createLeaveRequest = async (req, res) => {
   try {
     const user = req.user;
+    const { startDate, endDate, reason } = req.body;
 
-    if (user.role !== "driver") {
+    let superAdminId;
+
+    if (user.role === "driver") {
+      if (!user.admin) {
+        return res.status(400).json({
+          message: "Le conducteur doit être rattaché à un administrateur.",
+        });
+      }
+
+      const admin = await User.findById(user.admin);
+      if (!admin || !admin.superAdmin) {
+        return res
+          .status(400)
+          .json({ message: "Administrateur ou SuperAdmin introuvable." });
+      }
+
+      superAdminId = admin.superAdmin;
+    } else if (user.role === "admin") {
+      if (!user.superAdmin) {
+        return res.status(400).json({
+          message: "L'administrateur doit être rattaché à un SuperAdmin.",
+        });
+      }
+
+      superAdminId = user.superAdmin;
+    } else {
       return res.status(403).json({
-        message: "Seuls les chauffeurs peuvent faire une demande de congé.",
+        message:
+          "Seuls les conducteurs et les administrateurs peuvent faire une demande de congé.",
       });
     }
 
-    const { startDate, endDate, reason } = req.body;
-
-    if (!user.admin) {
-      return res
-        .status(400)
-        .json({ message: "Driver must be assigned to an admin." });
-    }
-
-    const admin = await User.findById(user.admin);
-    if (!admin || !admin.superAdmin) {
-      return res
-        .status(400)
-        .json({ message: "Admin or superAdmin not found." });
-    }
-
     const leave = await LeaveRequest.create({
-      driver: user.id,
-      superAdmin: admin.superAdmin,
+      requester: user._id,
+      superAdmin: superAdminId,
       startDate,
       endDate,
       reason,
     });
-    // ✅ Notify the super admin
+
     await sendNotification(
-      admin.superAdmin,
-      `📅 New leave request submitted by "${user.name}" from ${startDate} to ${endDate}.`
+      superAdminId,
+      `📅 Nouvelle demande de congé de "${user.name}" du ${startDate} au ${endDate}.`
     );
 
     res.status(201).json(leave);
@@ -57,7 +69,7 @@ exports.getAllLeaveRequests = async (req, res) => {
     }
 
     const requests = await LeaveRequest.find({ superAdmin: user.id })
-      .populate("driver", "name email phone")
+      .populate("requester", "name email phone role")
       .sort({ createdAt: -1 });
 
     res.json(requests);
@@ -130,11 +142,8 @@ exports.rejectLeaveRequest = async (req, res) => {
 exports.getMyLeaveRequests = async (req, res) => {
   try {
     const user = req.user;
-    if (user.role !== "driver") {
-      return res.status(403).json({ message: "Accès réservé aux chauffeurs." });
-    }
 
-    const leaves = await LeaveRequest.find({ driver: user._id }).sort({
+    const leaves = await LeaveRequest.find({ requester: user._id }).sort({
       createdAt: -1,
     });
 

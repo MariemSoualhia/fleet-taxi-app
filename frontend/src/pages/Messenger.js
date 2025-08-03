@@ -14,7 +14,6 @@ function Messenger({ currentUserId }) {
   const [unreadConversations, setUnreadConversations] = useState([]);
   const { user, token } = useAuth();
 
-  // 🔴 Récupère les conversations avec messages non lus
   const fetchUnreadConversations = async () => {
     try {
       const { data } = await axios.get(
@@ -25,14 +24,8 @@ function Messenger({ currentUserId }) {
       );
       setUnreadConversations(data);
     } catch (err) {
-      console.error("Erreur chargement des conversations non lues :", err);
+      console.error("Error loading unread conversations:", err);
     }
-  };
-
-  const hasUnreadMessages = (conversationId) => {
-    return unreadConversations.some(
-      (conv) => conv.conversationId === conversationId
-    );
   };
 
   const getUnreadCount = (conversationId) => {
@@ -42,15 +35,15 @@ function Messenger({ currentUserId }) {
     return conv ? conv.unreadCount : 0;
   };
 
-  // 🔁 Chargement des conversations
   useEffect(() => {
     axios
-      .get(`http://localhost:5000/api/messages/conversations/${user.id}`)
+      .get(`http://localhost:5000/api/messages/conversations/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .then((res) => setConversations(res.data))
       .catch((err) => console.error(err));
   }, [user.id]);
 
-  // 🔁 Chargement des contacts disponibles
   useEffect(() => {
     axios
       .get(`http://localhost:5000/api/messages/available-contacts`, {
@@ -60,33 +53,30 @@ function Messenger({ currentUserId }) {
       .catch((err) => console.error(err));
   }, [user.id]);
 
-  // 🔁 Messages d'une conversation
   useEffect(() => {
     if (!selectedConv) return;
     axios
-      .get(`http://localhost:5000/api/messages/messages/${selectedConv._id}`)
+      .get(
+        `http://localhost:5000/api/messages/messages/${selectedConv.conversationId}`
+      )
       .then((res) => setMessages(res.data))
       .catch((err) => console.error(err));
   }, [selectedConv]);
 
-  // 🔁 Conversation lue => messages marqués comme lus
   const handleSelectConversation = async (conv) => {
     setSelectedConv(conv);
     try {
       await axios.put(
-        //  `http://localhost:5000/api/messages/mark-read/${conv._id}`,
+        `http://localhost:5000/api/messages/mark-read-conversation/${conv.conversationId}`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      fetchUnreadConversations(); // MAJ après lecture
+      fetchUnreadConversations();
     } catch (err) {
-      console.error("Erreur marquage messages comme lus", err);
+      console.error("Error marking messages as read", err);
     }
   };
 
-  // ✉️ Envoi d’un message
   const sendMessage = () => {
     if (!newMessage.trim()) return;
 
@@ -95,12 +85,12 @@ function Messenger({ currentUserId }) {
     )?._id;
 
     if (!recipientId) {
-      console.error("Destinataire introuvable");
+      console.error("Recipient not found");
       return;
     }
 
     const msg = {
-      conversationId: selectedConv._id,
+      conversationId: selectedConv.conversationId,
       recipient: recipientId,
       content: newMessage,
     };
@@ -112,12 +102,11 @@ function Messenger({ currentUserId }) {
       .then((res) => {
         setMessages((prev) => [...prev, res.data]);
         setNewMessage("");
-        fetchUnreadConversations(); // Recharger après envoi
+        fetchUnreadConversations();
       })
       .catch((err) => console.error(err));
   };
 
-  // ➕ Créer nouvelle conversation
   const createConversation = () => {
     if (!selectedContactId) return;
 
@@ -139,61 +128,88 @@ function Messenger({ currentUserId }) {
       .catch((err) => console.error(err));
   };
 
-  // 🔁 Récupère au démarrage les conversations non lues
   useEffect(() => {
     fetchUnreadConversations();
   }, [user.id]);
 
   return (
-    <div style={{ display: "flex", height: "80vh", border: "1px solid #ccc" }}>
-      {/* Liste des conversations */}
+    <div
+      style={{
+        display: "flex",
+        height: "80vh",
+        border: "1px solid #d9d9d9",
+        borderRadius: "8px",
+        overflow: "hidden",
+        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      {/* Conversations list */}
       <div
         style={{
           width: "30%",
           borderRight: "1px solid #ccc",
           overflowY: "auto",
           padding: "10px",
+          backgroundColor: "#f7f9fc",
         }}
       >
-        <h3>Conversations</h3>
-        <button onClick={() => setShowNewConv(true)}>
-          Nouvelle Conversation
-        </button>
-        {conversations.map((conv) => (
-          <div
-            key={conv._id}
-            onClick={() => handleSelectConversation(conv)}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "10px",
+          }}
+        >
+          <h3 style={{ margin: 0 }}>Messages</h3>
+          <button
+            onClick={() => setShowNewConv(true)}
             style={{
-              padding: "10px",
-              cursor: "pointer",
-              backgroundColor:
-                selectedConv?._id === conv._id ? "#eee" : "white",
+              background: "#007bff",
+              color: "white",
+              border: "none",
               borderRadius: "5px",
-              marginTop: "5px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              padding: "5px 10px",
+              cursor: "pointer",
             }}
           >
-            <b>
-              {conv.participants.find((p) => p._id !== user.id)?.name ||
-                "Conversation"}
-            </b>
-            {hasUnreadMessages(conv._id) && (
-              <Badge
-                count={getUnreadCount(conv._id)}
-                style={{ backgroundColor: "#f5222d" }}
-              />
-            )}
-          </div>
-        ))}
+            +
+          </button>
+        </div>
+
+        {conversations.map((conv) => {
+          const otherUser = conv.participants.find((p) => p._id !== user.id);
+          const unreadCount = getUnreadCount(conv._id);
+
+          return (
+            <div
+              key={conv._id}
+              onClick={() => handleSelectConversation(conv)}
+              style={{
+                padding: "10px",
+                backgroundColor:
+                  selectedConv?._id === conv._id ? "#e6f7ff" : "white",
+                borderRadius: "5px",
+                marginBottom: "5px",
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                border: "1px solid #e0e0e0",
+              }}
+            >
+              <span>{otherUser?.name || "User"}</span>
+              {unreadCount > 0 && <Badge count={unreadCount} />}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Fenêtre de chat */}
+      {/* Chat area */}
       <div
         style={{
           width: "70%",
-          padding: "10px",
+          padding: "15px",
           display: "flex",
           flexDirection: "column",
         }}
@@ -205,14 +221,14 @@ function Messenger({ currentUserId }) {
               style={{
                 alignSelf: "flex-start",
                 marginBottom: "10px",
-                backgroundColor: "#eee",
+                backgroundColor: "#e4e6eb",
                 border: "none",
-                padding: "5px 10px",
-                cursor: "pointer",
+                padding: "6px 12px",
                 borderRadius: "5px",
+                cursor: "pointer",
               }}
             >
-              ← Retour
+              ← Back
             </button>
 
             <div
@@ -220,9 +236,9 @@ function Messenger({ currentUserId }) {
                 flexGrow: 1,
                 overflowY: "auto",
                 border: "1px solid #ddd",
-                padding: "10px",
-                borderRadius: "5px",
-                backgroundColor: "#f9f9f9",
+                padding: "15px",
+                borderRadius: "8px",
+                backgroundColor: "#fafafa",
               }}
             >
               {messages.map((msg) => {
@@ -233,17 +249,17 @@ function Messenger({ currentUserId }) {
                     style={{
                       display: "flex",
                       justifyContent: isSender ? "flex-end" : "flex-start",
-                      margin: "5px 0",
+                      marginBottom: "10px",
                     }}
                   >
                     <span
                       style={{
                         maxWidth: "70%",
-                        padding: "8px 12px",
-                        backgroundColor: isSender ? "#d3d3d3" : "#add8e6",
-                        borderRadius: "15px",
-                        color: "black",
-                        wordWrap: "break-word",
+                        padding: "10px 15px",
+                        backgroundColor: isSender ? "#d1e7dd" : "#f8d7da",
+                        borderRadius: "20px",
+                        color: "#000",
+                        wordBreak: "break-word",
                       }}
                     >
                       {msg.content}
@@ -263,8 +279,9 @@ function Messenger({ currentUserId }) {
                   padding: "10px",
                   borderRadius: "5px",
                   border: "1px solid #ccc",
+                  marginRight: "10px",
                 }}
-                placeholder="Écrire un message..."
+                placeholder="Write a message..."
                 onKeyDown={(e) => {
                   if (e.key === "Enter") sendMessage();
                 }}
@@ -272,7 +289,6 @@ function Messenger({ currentUserId }) {
               <button
                 onClick={sendMessage}
                 style={{
-                  marginLeft: "10px",
                   padding: "10px 20px",
                   borderRadius: "5px",
                   backgroundColor: "#007bff",
@@ -281,32 +297,57 @@ function Messenger({ currentUserId }) {
                   cursor: "pointer",
                 }}
               >
-                Envoyer
+                Send
               </button>
             </div>
           </>
         ) : showNewConv ? (
           <div>
-            <h3>Nouvelle Conversation</h3>
+            <h3>New Conversation</h3>
             <select
               onChange={(e) => setSelectedContactId(e.target.value)}
               value={selectedContactId || ""}
+              style={{ padding: "10px", marginBottom: "10px", width: "100%" }}
             >
-              <option value="">Sélectionner un contact</option>
+              <option value="">Select a contact</option>
               {contacts.map((c) => (
                 <option key={c._id} value={c._id}>
                   {c.name} ({c.role})
                 </option>
               ))}
             </select>
-            <button onClick={createConversation} disabled={!selectedContactId}>
-              Créer
-            </button>
-            <button onClick={() => setShowNewConv(false)}>Annuler</button>
+            <div>
+              <button
+                onClick={createConversation}
+                disabled={!selectedContactId}
+                style={{
+                  backgroundColor: "#28a745",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "5px",
+                  marginRight: "10px",
+                }}
+              >
+                Create
+              </button>
+              <button
+                onClick={() => setShowNewConv(false)}
+                style={{
+                  backgroundColor: "#6c757d",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "5px",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         ) : (
-          <div style={{ textAlign: "center", marginTop: "20%" }}>
-            Sélectionnez une conversation ou créez-en une nouvelle
+          <div style={{ textAlign: "center", marginTop: "30%", color: "#888" }}>
+            Select a conversation or create a new one
           </div>
         )}
       </div>

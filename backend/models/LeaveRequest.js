@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 
 const leaveRequestSchema = new mongoose.Schema(
   {
-    driver: {
+    requester: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,

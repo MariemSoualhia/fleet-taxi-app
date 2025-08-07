@@ -58,5 +58,15 @@ router.post(
   authorizeRoles("superAdmin", "admin"),
   tripController.estimateTrip
 );
+// Statistiques globales pour le dashboard
+router.get(
+  "/stats/driver/overview",
+  protect,
+  authorizeRoles("superAdmin", "admin", "driver"),
+  tripController.getTripStatsOverview
+);
+
+// 🚗 Prochain trajet pour le driver
+router.get("/driver-next-trip/:driverId", tripController.getNextTripForDriver);
 
 module.exports = router;

@@ -12,6 +12,7 @@ import {
   List,
   Spin,
 } from "antd";
+// import DirectionsIcon from "@mui/icons-material/Directions";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
 import {
@@ -34,6 +35,65 @@ function DashboardPage() {
   const [assignedTaxis, setAssignedTaxis] = useState([]);
   const [loadingTaxis, setLoadingTaxis] = useState(false);
   const [loadingKpis, setLoadingKpis] = useState(false);
+  const [adminStats, setAdminStats] = useState(null);
+  const [loadingAdminStats, setLoadingAdminStats] = useState(false);
+  const [driverStats, setDriverStats] = useState(null);
+  const [loadingDriverStats, setLoadingDriverStats] = useState(false);
+  const [nextTrip, setNextTrip] = useState(null);
+  const [loadingNextTrip, setLoadingNextTrip] = useState(false);
+
+  useEffect(() => {
+    const fetchNextTrip = async () => {
+      if (user?.role === "driver" && token) {
+        setLoadingNextTrip(true);
+        try {
+          const res = await fetch(
+            `http://localhost:5000/api/trips/driver-next-trip/${user.id}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setNextTrip(data);
+          } else {
+            setNextTrip(null);
+          }
+        } catch (error) {
+          console.error("Error fetching next trip:", error);
+          setNextTrip(null);
+        } finally {
+          setLoadingNextTrip(false);
+        }
+      }
+    };
+
+    fetchNextTrip();
+  }, [user, token]);
+
+  useEffect(() => {
+    const fetchDriverStats = async () => {
+      if (user?.role === "driver" && token) {
+        setLoadingDriverStats(true);
+        try {
+          const res = await fetch(
+            `http://localhost:5000/api/trips/stats/driver/overview`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          const data = await res.json();
+          setDriverStats(data);
+        } catch (error) {
+          console.error("Error fetching driver stats:", error);
+          message.error("Failed to load driver statistics");
+        } finally {
+          setLoadingDriverStats(false);
+        }
+      }
+    };
+    fetchDriverStats();
+  }, [user, token]);
 
   // SuperAdmin: fetch stats + KPIs
   useEffect(() => {
@@ -90,6 +150,32 @@ function DashboardPage() {
     };
 
     fetchAssignedTaxis();
+  }, [user, token]);
+  useEffect(() => {
+    const fetchAdminStats = async () => {
+      if (user?.role === "admin" && token) {
+        setLoadingAdminStats(true);
+        try {
+          const res = await fetch(
+            "http://localhost:5000/api/kpis/admin-stats",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          const data = await res.json();
+          setAdminStats(data);
+        } catch (error) {
+          console.error("Error fetching admin stats:", error);
+          message.error("Failed to load admin statistics");
+        } finally {
+          setLoadingAdminStats(false);
+        }
+      }
+    };
+
+    fetchAdminStats();
   }, [user, token]);
 
   const showEditModal = () => {
@@ -308,6 +394,98 @@ function DashboardPage() {
       // Admin & Driver (inchangés)
       case "admin":
         return (
+          <div style={{ marginTop: 24 }}>
+            {loadingAdminStats ? (
+              <Spin />
+            ) : (
+              <Row gutter={16}>
+                <Col span={6}>
+                  <Card>
+                    <Statistic
+                      title="My Drivers"
+                      value={adminStats?.drivers || 0}
+                      prefix={<TeamOutlined />}
+                      valueStyle={{ color: "#1890ff" }}
+                    />
+                  </Card>
+                </Col>
+
+                <Col span={6}>
+                  <Card>
+                    <Statistic
+                      title="Approved Drivers"
+                      value={adminStats?.approvedDrivers || 0}
+                      valueStyle={{ color: "#52c41a" }}
+                    />
+                  </Card>
+                </Col>
+
+                <Col span={6}>
+                  <Card>
+                    <Statistic
+                      title="Active Alerts"
+                      value={adminStats?.alerts?.active || 0}
+                      prefix={<AlertOutlined />}
+                      valueStyle={{ color: "#fa541c" }}
+                    />
+                  </Card>
+                </Col>
+
+                <Col span={6}>
+                  <Card>
+                    <Statistic
+                      title="Resolved Alerts"
+                      value={adminStats?.alerts?.resolved || 0}
+                      valueStyle={{ color: "#389e0d" }}
+                    />
+                  </Card>
+                </Col>
+
+                <Col span={6} style={{ marginTop: 16 }}>
+                  <Card>
+                    <Statistic
+                      title="Total Trips"
+                      value={adminStats?.trips?.total || 0}
+                      prefix={<CarOutlined />}
+                    />
+                  </Card>
+                </Col>
+
+                <Col span={6} style={{ marginTop: 16 }}>
+                  <Card>
+                    <Statistic
+                      title="Ongoing Trips"
+                      value={adminStats?.trips?.ongoing || 0}
+                      valueStyle={{ color: "#1890ff" }}
+                    />
+                  </Card>
+                </Col>
+
+                <Col span={6} style={{ marginTop: 16 }}>
+                  <Card>
+                    <Statistic
+                      title="Completed Trips"
+                      value={adminStats?.trips?.completed || 0}
+                      valueStyle={{ color: "#52c41a" }}
+                    />
+                  </Card>
+                </Col>
+
+                <Col span={6} style={{ marginTop: 16 }}>
+                  <Card>
+                    <Statistic
+                      title="Delayed Trips"
+                      value={adminStats?.trips?.delayed || 0}
+                      valueStyle={{ color: "#fa8c16" }}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+            )}
+          </div>
+        );
+
+        return (
           <Row gutter={16}>
             <Col span={8}>
               <Card title="My Drivers" bordered={false}>
@@ -329,39 +507,98 @@ function DashboardPage() {
 
       case "driver":
         return (
-          <Row gutter={16}>
-            <Col span={12}>
-              <Card title="My Next Trip" bordered={false}>
-                <Text>Pickup at 15:30 - Central Station</Text>
-              </Card>
-            </Col>
-            <Col span={12}>
-              <Card
-                title="My Vehicle(s)"
-                bordered={false}
-                loading={loadingTaxis}
-              >
-                {assignedTaxis.length === 0 ? (
-                  <Text>No taxi assigned</Text>
-                ) : (
-                  <List
-                    dataSource={assignedTaxis}
-                    renderItem={(taxi) => (
-                      <List.Item key={taxi._id}>
-                        <Text strong>{taxi.model}</Text> - Plate:{" "}
-                        {taxi.plateNumber} - Status:{" "}
-                        {taxi.status === "available"
-                          ? "Available"
-                          : taxi.status === "inMaintenance"
-                          ? "In Maintenance"
-                          : taxi.status}
-                      </List.Item>
-                    )}
+          <>
+            <Row gutter={16} style={{ marginBottom: 24 }}>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="Total Trips"
+                    value={driverStats?.totalTrips || 0}
+                    prefix={<CarOutlined />}
+                    valueStyle={{ color: "#1890ff" }}
                   />
-                )}
-              </Card>
-            </Col>
-          </Row>
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="Total Distance"
+                    value={driverStats?.totalDistance || 0}
+                    valueStyle={{ color: "#52c41a" }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="Ongoing Trips"
+                    value={driverStats?.ongoingTrips || 0}
+                    valueStyle={{ color: "#faad14" }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="Delayed Trips"
+                    value={driverStats?.delayedTrips || 0}
+                    valueStyle={{ color: "#f5222d" }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Card
+                  title="My Next Trip"
+                  bordered={false}
+                  loading={loadingNextTrip}
+                >
+                  {nextTrip ? (
+                    <>
+                      <Text strong>{nextTrip.startLocation}</Text>
+                      <Text strong>{nextTrip.endLocation}</Text>
+                      <br />
+                      <Text>
+                        {new Date(nextTrip.startTime).toLocaleString()}
+                      </Text>
+                      <br />
+                      <Text>Status: {nextTrip.tripStatus}</Text>
+                    </>
+                  ) : (
+                    <Text>No upcoming trip found</Text>
+                  )}
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card
+                  title="My Vehicle(s)"
+                  bordered={false}
+                  loading={loadingTaxis}
+                >
+                  {assignedTaxis.length === 0 ? (
+                    <Text>No taxi assigned</Text>
+                  ) : (
+                    <List
+                      dataSource={assignedTaxis}
+                      renderItem={(taxi) => (
+                        <List.Item key={taxi._id}>
+                          <Text strong>{taxi.model}</Text> - Plate:{" "}
+                          {taxi.plateNumber} - Status:{" "}
+                          {taxi.status === "available"
+                            ? "Available"
+                            : taxi.status === "inMaintenance"
+                            ? "In Maintenance"
+                            : taxi.status}
+                        </List.Item>
+                      )}
+                    />
+                  )}
+                </Card>
+              </Col>
+            </Row>
+          </>
         );
 
       default:

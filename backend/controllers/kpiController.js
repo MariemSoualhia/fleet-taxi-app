@@ -121,3 +121,64 @@ exports.getOverview = async (req, res) => {
     res.status(500).json({ message: "Erreur lors du chargement des KPIs" });
   }
 };
+
+exports.getAdminStats = async (req, res) => {
+  try {
+    const adminId = req.user._id;
+
+    // 1. Récupérer les drivers
+    const drivers = await User.find({
+      role: "driver",
+      admin: adminId,
+    }).select("isApproved");
+
+    const totalDrivers = drivers.length;
+    const approvedDrivers = drivers.filter((d) => d.isApproved).length;
+
+    // 2. Récupérer les alertes
+    const alerts = await Alert.find({ admin: adminId }).select("status");
+
+    const totalAlerts = alerts.length;
+    const activeAlerts = alerts.filter((a) => a.status === "active").length;
+    const resolvedAlerts = alerts.filter((a) => a.status === "resolved").length;
+
+    // 3. Récupérer les trajets
+    const trips = await Trip.find({ admin: adminId }).select(
+      "tripStatus deliveryStatus"
+    );
+
+    const totalTrips = trips.length;
+    const completedTrips = trips.filter(
+      (t) => t.tripStatus === "completed"
+    ).length;
+    const ongoingTrips = trips.filter((t) => t.tripStatus === "ongoing").length;
+    const cancelledTrips = trips.filter(
+      (t) => t.tripStatus === "cancelled"
+    ).length;
+    const delayedTrips = trips.filter(
+      (t) => t.deliveryStatus === "delayed"
+    ).length;
+
+    res.json({
+      drivers: totalDrivers,
+      approvedDrivers,
+      alerts: {
+        total: totalAlerts,
+        active: activeAlerts,
+        resolved: resolvedAlerts,
+      },
+      trips: {
+        total: totalTrips,
+        completed: completedTrips,
+        ongoing: ongoingTrips,
+        cancelled: cancelledTrips,
+        delayed: delayedTrips,
+      },
+    });
+  } catch (err) {
+    console.error("Erreur dans admin stats:", err);
+    res
+      .status(500)
+      .json({ message: "Erreur lors de la récupération des statistiques." });
+  }
+};

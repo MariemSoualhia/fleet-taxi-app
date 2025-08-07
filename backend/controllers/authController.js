@@ -233,7 +233,7 @@ exports.registerSuperAdmin = async (req, res) => {
     });
 
     // 🔔 Envoi d'email au propriétaire de la plateforme
-    const platformOwnerEmail = "wissalb904@gmail.com";
+    const platformOwnerEmail = "Wissal.bahri@esprit.tn";
     const subject = "🟢 New Super Admin Registration Request";
 
     const message = `
@@ -278,12 +278,9 @@ exports.registerDriverBySuperAdmin = async (req, res) => {
       superAdmin: superAdminId,
     });
     if (!admin) {
-      return res
-        .status(403)
-        .json({
-          message:
-            "Unauthorized: Admin not found or not under your supervision.",
-        });
+      return res.status(403).json({
+        message: "Unauthorized: Admin not found or not under your supervision.",
+      });
     }
 
     const userExists = await User.findOne({ email });

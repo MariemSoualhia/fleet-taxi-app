@@ -87,35 +87,48 @@ function LeaveManagementPage() {
       );
     });
 
-    // Unique par driver pour éviter doublons
-    const uniqueLeaves = [];
-    const seenDrivers = new Set();
+    // Extraire la liste unique des personnes
+    const seenRequesters = new Set();
+    const names = [];
     for (const leave of leavesOnDate) {
-      if (!seenDrivers.has(leave.driver?._id)) {
-        uniqueLeaves.push(leave);
-        seenDrivers.add(leave.driver?._id);
+      if (!seenRequesters.has(leave.requester?._id)) {
+        seenRequesters.add(leave.requester?._id);
+        names.push(leave.requester?.name || "Person");
       }
     }
 
+    if (names.length === 0) return null; // Pas de congés ce jour-là
+
     return (
-      <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-        {uniqueLeaves.map((leave) => (
-          <Tooltip
-            key={leave._id}
-            title={leave.driver?.name || "Driver"}
-            placement="top"
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <Tooltip
+          title={
+            <div>
+              {names.map((name, i) => (
+                <div key={i}>{name}</div>
+              ))}
+            </div>
+          }
+          placement="top"
+        >
+          <div
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              background: "red",
+              color: "white",
+              fontSize: 12,
+              fontWeight: "bold",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
           >
-            <div
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                border: "2px solid red",
-                cursor: "pointer",
-              }}
-            />
-          </Tooltip>
-        ))}
+            {names.length}
+          </div>
+        </Tooltip>
       </div>
     );
   };

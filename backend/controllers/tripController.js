@@ -203,3 +203,96 @@ exports.estimateTrip = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// 📊 Statistiques globales des trajets selon le rôle
+exports.getTripStatsOverview = async (req, res) => {
+  try {
+    const user = req.user;
+    const match = {};
+
+    // Filtre selon le rôle de l'utilisateur
+    if (user.role === "driver") {
+      const taxis = await Taxi.find({ assignedDriver: user._id }, "_id");
+      const taxiIds = taxis.map((t) => t._id);
+      match.taxiId = { $in: taxiIds };
+    } else if (user.role === "admin") {
+      match.admin = user._id;
+    } else if (user.role === "superAdmin") {
+      match.superAdmin = user._id;
+    }
+
+    // Agrégation pour calculer toutes les stats en une seule requête
+    const stats = await Trip.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: null,
+          totalTrips: { $sum: 1 },
+          totalDistance: { $sum: "$distanceDriven" },
+          totalFuelUsed: { $sum: "$fuelUsed" },
+          avgDistance: { $avg: "$distanceDriven" },
+          avgFuelUsed: { $avg: "$fuelUsed" },
+          ongoingTrips: {
+            $sum: { $cond: [{ $eq: ["$tripStatus", "ongoing"] }, 1, 0] },
+          },
+          delayedTrips: {
+            $sum: { $cond: [{ $eq: ["$deliveryStatus", "delayed"] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    if (stats.length === 0) {
+      return res.json({
+        totalTrips: 0,
+        totalDistance: 0,
+        totalFuelUsed: 0,
+        avgDistance: 0,
+        avgFuelUsed: 0,
+        ongoingTrips: 0,
+        delayedTrips: 0,
+      });
+    }
+
+    res.json(stats[0]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 🚗 Prochain trajet du driver
+
+exports.getNextTripForDriver = async (req, res) => {
+  const driverId = req.params.driverId; // ou req.user.id si authentifié
+
+  try {
+    // Trouver tous les taxis assignés à ce driver
+    const taxis = await Taxi.find({ assignedDriver: driverId }).select("_id");
+
+    if (!taxis.length) {
+      return res
+        .status(404)
+        .json({ message: "No taxi assigned to this driver." });
+    }
+
+    const taxiIds = taxis.map((t) => t._id);
+
+    // Chercher le prochain trajet lié à ces taxis
+    const nextTrip = await Trip.findOne({
+      taxiId: { $in: taxiIds },
+      startTime: { $gte: new Date() },
+      tripStatus: { $ne: "cancelled" },
+    })
+      .sort({ startTime: 1 })
+      .populate("taxiId", "model plateNumber")
+      .lean();
+
+    if (!nextTrip) {
+      return res.status(404).json({ message: "No upcoming trips found." });
+    }
+
+    res.json(nextTrip);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

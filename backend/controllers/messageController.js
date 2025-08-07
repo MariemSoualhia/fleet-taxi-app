@@ -34,14 +34,30 @@ const sendMessage = async (req, res) => {
         .status(403)
         .json({ message: "Utilisateur non participant à la conversation." });
     }
-
     let superAdminId;
     if (req.user.role === "superAdmin") {
       superAdminId = req.user._id;
-    } else if (req.user.role === "admin" || req.user.role === "driver") {
-      superAdminId = req.user.superAdmin;
-    } else {
-      return res.status(400).json({ message: "Rôle utilisateur invalide." });
+    } else if (req.user.role === "admin") {
+      // L'admin a directement le superAdmin
+      const admin = await User.findById(req.user._id).select("superAdmin");
+      superAdminId = admin.superAdmin;
+    } else if (req.user.role === "driver") {
+      // Le driver → on va chercher son admin puis le superAdmin
+      const driver = await User.findById(req.user._id).select("admin");
+      if (!driver || !driver.admin) {
+        return res
+          .status(400)
+          .json({ message: "Admin not found for this driver" });
+      }
+
+      const admin = await User.findById(driver.admin).select("superAdmin");
+      if (!admin || !admin.superAdmin) {
+        return res
+          .status(400)
+          .json({ message: "SuperAdmin not found for this admin" });
+      }
+
+      superAdminId = admin.superAdmin;
     }
 
     const newMessage = await Message.create({

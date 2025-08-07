@@ -78,6 +78,7 @@ function Messenger({ currentUserId }) {
   };
 
   const sendMessage = () => {
+    console.log(selectedConv);
     if (!newMessage.trim()) return;
 
     const recipientId = selectedConv.participants.find(
@@ -107,7 +108,7 @@ function Messenger({ currentUserId }) {
       .catch((err) => console.error(err));
   };
 
-  const createConversation = () => {
+  const createConversation = async () => {
     if (!selectedContactId) return;
 
     axios
@@ -121,9 +122,14 @@ function Messenger({ currentUserId }) {
         }
       )
       .then((res) => {
-        setConversations((prev) => [...prev, res.data]);
-        setSelectedConv(res.data);
+        console.log(res.data);
         setShowNewConv(false);
+        axios
+          .get(`http://localhost:5000/api/messages/conversations/${user.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          .then((res) => setConversations(res.data))
+          .catch((err) => console.error(err));
       })
       .catch((err) => console.error(err));
   };

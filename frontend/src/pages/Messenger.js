@@ -28,10 +28,17 @@ function Messenger({ currentUserId }) {
     }
   };
 
-  const getUnreadCount = (conversationId) => {
-    const conv = unreadConversations.find(
-      (c) => c.conversationId === conversationId
+  const getUnreadCount = (conversation) => {
+    console.log(conversation);
+    console.log(
+      "Searching unreadCount for conversation id:",
+      conversation.conversationId
     );
+    console.log("Unread conversations:", unreadConversations);
+    const conv = unreadConversations.find(
+      (c) => c._id === conversation.conversationId
+    );
+    console.log("Found unread conversation:", conversation);
     return conv ? conv.unreadCount : 0;
   };
 
@@ -185,7 +192,7 @@ function Messenger({ currentUserId }) {
 
         {conversations.map((conv) => {
           const otherUser = conv.participants.find((p) => p._id !== user.id);
-          const unreadCount = getUnreadCount(conv._id);
+          const unreadCount = getUnreadCount(conv);
 
           return (
             <div

@@ -91,55 +91,81 @@ const getMessagesByConversation = async (req, res) => {
 
 const getConversation = async (req, res) => {
   try {
-    const userId = new mongoose.Types.ObjectId(req.user._id);
+    const userId = req.user._id;
+    console.log("userId:", userId.toString());
 
-    // Trouver une conversation où l'utilisateur est participant
-    const conversation = await mongoose.model("Conversation").findOne({
+    // Trouver toutes les conversations de l'utilisateur
+    const conversations = await Conversation.find({
       participants: userId,
-    });
+    }).lean();
 
-    if (!conversation) {
-      return res.status(404).json({ error: "Conversation non trouvée" });
+    if (conversations.length === 0) {
+      return res.status(404).json({ error: "Aucune conversation trouvée" });
     }
 
-    // Trouver l'autre participant dans la conversation
-    const otherId = conversation.participants.find(
-      (id) => id.toString() !== userId.toString()
+    // Pour chaque conversation, calculer le nombre de messages non lus (avec countDocuments)
+    const result = await Promise.all(
+      conversations.map(async (conversation) => {
+        const otherId = conversation.participants.find(
+          (id) => id.toString() !== userId.toString()
+        );
+        console.log("other id:", otherId.toString());
+
+        // compter les messages non lus pour cet utilisateur dans cette conversation
+        const unreadCountResult = await Message.aggregate([
+          {
+            $match: {
+              conversationId: conversation._id,
+              recipient: userId,
+              read: false,
+            },
+          },
+          {
+            $count: "unreadCount",
+          },
+        ]);
+
+        const unreadCount =
+          unreadCountResult.length > 0 ? unreadCountResult[0].unreadCount : 0;
+
+        console.log("unreadCount id:", unreadCount);
+
+        // récupérer les infos des participants
+        const users = await User.find({
+          _id: { $in: [userId, otherId] },
+        })
+          .select("name profileImage role")
+          .lean();
+
+        const orderedParticipants = [userId, otherId].map((id) =>
+          users.find((u) => u._id.toString() === id.toString())
+        );
+
+        // Optionnel : récupérer les derniers messages si tu veux (limité à 10)
+        const messages = await Message.find({
+          conversationId: conversation._id,
+        })
+          .sort({ createdAt: -1 })
+          .limit(10)
+          .populate("sender", "name profileImage")
+          .populate("recipient", "name profileImage")
+          .lean();
+
+        // Inverser les messages pour qu'ils soient du plus ancien au plus récent
+        messages.reverse();
+
+        return {
+          conversationId: conversation._id,
+          participants: orderedParticipants,
+          unreadCount,
+          messages,
+        };
+      })
     );
 
-    // Récupérer les messages de cette conversation
-    const messages = await Message.find({ conversationId: conversation._id })
-      .sort({ createdAt: 1 })
-      .populate("sender", "name profileImage")
-      .populate("recipient", "name profileImage")
-      .lean();
-
-    // Nombre de messages non lus pour l'utilisateur actuel
-    const unreadCount = messages.filter(
-      (msg) => !msg.read && msg.recipient._id.toString() === userId.toString()
-    ).length;
-
-    // Récupérer les infos des deux participants
-    const users = await User.find({
-      _id: { $in: [userId, otherId] },
-    })
-      .select("name profileImage role")
-      .lean();
-
-    const orderedParticipants = [userId, otherId].map((id) =>
-      users.find((u) => u._id.toString() === id.toString())
-    );
-
-    res.json([
-      {
-        conversationId: conversation._id,
-        participants: orderedParticipants,
-        unreadCount,
-        messages,
-      },
-    ]);
+    res.json(result);
   } catch (error) {
-    console.error(error);
+    console.error("Erreur getConversations:", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 };
